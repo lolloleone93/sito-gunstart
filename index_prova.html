@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ora Locale e Contatore</title>
+    <script>
+        let intervalIds = [];
+
+        function updateLocalTime() {
+            const localTime = new Date();
+            document.getElementById('localTime').innerText = `Ora Locale: ${localTime.toLocaleTimeString()}`;
+        }
+
+        function formatTime(seconds) {
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const secs = seconds % 60;
+            return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function startCounter(timeDisplay, startTime) {
+            function updateCounter() {
+                const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+                timeDisplay.innerText = `Contatore: ${formatTime(elapsedSeconds)}`;
+            }
+            updateCounter();
+            const intervalId = setInterval(updateCounter, 1000);
+            intervalIds.push(intervalId);
+        }
+
+        function handleButtonClick() {
+            const numberInput = document.getElementById('numberInput').value;
+            const timeNow = new Date();
+            const outputDiv = document.getElementById('output');
+            
+            const entry = document.createElement('div');
+            entry.innerHTML = `<p>Partenza: ${numberInput} | Gun Start: ${timeNow.toLocaleTimeString()}</p>`;
+            
+            const counterDisplay = document.createElement('p');
+            counterDisplay.innerText = "Contatore: 00:00:00";
+            entry.appendChild(counterDisplay);
+            outputDiv.appendChild(entry);
+            
+            const startTime = Date.now();
+            startCounter(counterDisplay, startTime);
+            
+            const savedData = JSON.parse(localStorage.getItem('timers')) || [];
+            savedData.push({ number: numberInput, startTime });
+            localStorage.setItem('timers', JSON.stringify(savedData));
+        }
+
+        function loadStoredTimers() {
+            const outputDiv = document.getElementById('output');
+            const savedData = JSON.parse(localStorage.getItem('timers')) || [];
+            savedData.forEach(entry => {
+                const div = document.createElement('div');
+                div.innerHTML = `<p>Numero: ${entry.number} | Ora pressione: ${new Date(entry.startTime).toLocaleTimeString()}</p>`;
+                
+                const counterDisplay = document.createElement('p');
+                counterDisplay.innerText = "Contatore: 00:00:00";
+                div.appendChild(counterDisplay);
+                outputDiv.appendChild(div);
+                
+                startCounter(counterDisplay, entry.startTime);
+            });
+        }
+
+        function resetTimers() {
+            intervalIds.forEach(clearInterval);
+            intervalIds = [];
+            localStorage.removeItem('timers');
+            document.getElementById('output').innerHTML = "";
+        }
+
+        window.onload = function () {
+            updateLocalTime();
+            setInterval(updateLocalTime, 1000);
+            loadStoredTimers();
+        };
+    </script>
+</head>
+<body>
+    <h1>GUN START & TIMER CORSA</h1>
+    <p id="localTime">Caricamento ora...</p>
+    <input type="number" id="numberInput" placeholder="Inserisci un numero">
+    <button onclick="handleButtonClick()">Avvia Timer</button>
+    <button onclick="resetTimers()">Reset</button>
+    <div id="output"></div>
+</body>
+</html>
