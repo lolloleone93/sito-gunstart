@@ -1,91 +1,660 @@
 <!DOCTYPE html>
+
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ora Locale e Contatore</title>
-    <script>
-        let intervalIds = [];
-
-        function updateLocalTime() {
-            const localTime = new Date();
-            document.getElementById('localTime').innerText = `Ora Locale: ${localTime.toLocaleTimeString()}`;
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>GUN START TIMER</title>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --red: #FF1E1E;
+            --red-dark: #B30000;
+            --red-glow: rgba(255,30,30,0.4);
+            --bg: #0A0A0A;
+            --surface: #111111;
+            --surface2: #1A1A1A;
+            --border: #2A2A2A;
+            --text: #EEEEEE;
+            --muted: #666;
+            --green: #00FF88;
+            --yellow: #FFD600;
         }
 
-        function formatTime(seconds) {
-            const hours = Math.floor(seconds / 3600);
-            const minutes = Math.floor((seconds % 3600) / 60);
-            const secs = seconds % 60;
-            return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-        }
+```
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
-        function startCounter(timeDisplay, startTime) {
-            function updateCounter() {
-                const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
-                timeDisplay.innerText = `Contatore: ${formatTime(elapsedSeconds)}`;
-            }
-            updateCounter();
-            const intervalId = setInterval(updateCounter, 1000);
-            intervalIds.push(intervalId);
-        }
+    body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: 'Rajdhani', sans-serif;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 16px 12px 40px;
+        overflow-x: hidden;
+    }
 
-        function handleButtonClick() {
-            const numberInput = document.getElementById('numberInput').value;
-            const timeNow = new Date();
-            const outputDiv = document.getElementById('output');
-            
-            const entry = document.createElement('div');
-            entry.innerHTML = `<p>Partenza: ${numberInput} | Gun Start: ${timeNow.toLocaleTimeString()}</p>`;
-            
-            const counterDisplay = document.createElement('p');
-            counterDisplay.innerText = "Contatore: 00:00:00";
-            entry.appendChild(counterDisplay);
-            outputDiv.appendChild(entry);
-            
-            const startTime = Date.now();
-            startCounter(counterDisplay, startTime);
-            
-            const savedData = JSON.parse(localStorage.getItem('timers')) || [];
-            savedData.push({ number: numberInput, startTime });
-            localStorage.setItem('timers', JSON.stringify(savedData));
-        }
+    /* Header */
+    .header {
+        width: 100%;
+        max-width: 600px;
+        text-align: center;
+        margin-bottom: 10px;
+    }
 
-        function loadStoredTimers() {
-            const outputDiv = document.getElementById('output');
-            const savedData = JSON.parse(localStorage.getItem('timers')) || [];
-            savedData.forEach(entry => {
-                const div = document.createElement('div');
-                div.innerHTML = `<p>Numero: ${entry.number} | Ora pressione: ${new Date(entry.startTime).toLocaleTimeString()}</p>`;
-                
-                const counterDisplay = document.createElement('p');
-                counterDisplay.innerText = "Contatore: 00:00:00";
-                div.appendChild(counterDisplay);
-                outputDiv.appendChild(div);
-                
-                startCounter(counterDisplay, entry.startTime);
-            });
-        }
+    .header h1 {
+        font-size: clamp(28px, 7vw, 48px);
+        font-weight: 700;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        color: var(--red);
+        text-shadow: 0 0 30px var(--red-glow);
+    }
 
-        function resetTimers() {
-            intervalIds.forEach(clearInterval);
-            intervalIds = [];
-            localStorage.removeItem('timers');
-            document.getElementById('output').innerHTML = "";
-        }
+    /* Clock Display */
+    .clock-panel {
+        width: 100%;
+        max-width: 600px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 16px 20px;
+        margin-bottom: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
 
-        window.onload = function () {
-            updateLocalTime();
-            setInterval(updateLocalTime, 1000);
-            loadStoredTimers();
-        };
-    </script>
+    .clock-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+    }
+
+    .clock-label {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--muted);
+        white-space: nowrap;
+    }
+
+    #localTime {
+        font-family: 'Share Tech Mono', monospace;
+        font-size: clamp(24px, 6vw, 36px);
+        color: var(--green);
+        text-shadow: 0 0 15px rgba(0,255,136,0.4);
+        letter-spacing: 0.05em;
+    }
+
+    .sync-status {
+        font-size: 11px;
+        padding: 2px 8px;
+        border-radius: 20px;
+        font-family: 'Share Tech Mono', monospace;
+        white-space: nowrap;
+    }
+    .sync-status.synced { background: rgba(0,255,136,0.15); color: var(--green); border: 1px solid rgba(0,255,136,0.3); }
+    .sync-status.manual { background: rgba(255,214,0,0.15); color: var(--yellow); border: 1px solid rgba(255,214,0,0.3); }
+    .sync-status.error  { background: rgba(255,30,30,0.15);  color: var(--red);    border: 1px solid rgba(255,30,30,0.3); }
+
+    /* Action buttons row */
+    .action-row {
+        display: flex;
+        gap: 8px;
+        width: 100%;
+    }
+
+    .btn-small {
+        flex: 1;
+        padding: 8px 6px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: var(--surface2);
+        color: var(--text);
+        font-family: 'Rajdhani', sans-serif;
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+    .btn-small:active { transform: scale(0.96); }
+    .btn-small.primary { border-color: rgba(255,214,0,0.4); color: var(--yellow); }
+    .btn-small.primary:hover { background: rgba(255,214,0,0.1); }
+    .btn-small.danger { border-color: rgba(255,30,30,0.4); color: var(--red); }
+    .btn-small.danger:hover { background: rgba(255,30,30,0.1); }
+
+    /* Manual time panel */
+    .manual-panel {
+        width: 100%;
+        max-width: 600px;
+        background: var(--surface);
+        border: 1px solid var(--yellow);
+        border-radius: 12px;
+        padding: 14px 16px;
+        margin-bottom: 12px;
+        display: none;
+        animation: slideDown 0.2s ease;
+    }
+    .manual-panel.open { display: block; }
+
+    @keyframes slideDown {
+        from { opacity: 0; transform: translateY(-8px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .manual-panel h3 {
+        font-size: 13px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--yellow);
+        margin-bottom: 10px;
+    }
+
+    .time-inputs {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+
+    .time-input-group {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .time-input-group label {
+        font-size: 10px;
+        text-transform: uppercase;
+        color: var(--muted);
+        letter-spacing: 0.1em;
+    }
+
+    .time-input-group input {
+        width: 100%;
+        padding: 8px 6px;
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--text);
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 18px;
+        text-align: center;
+        outline: none;
+    }
+    .time-input-group input:focus { border-color: var(--yellow); }
+
+    .time-sep {
+        font-size: 22px;
+        color: var(--muted);
+        margin-top: 16px;
+    }
+
+    .btn-apply {
+        width: 100%;
+        padding: 10px;
+        background: var(--yellow);
+        color: #000;
+        border: none;
+        border-radius: 8px;
+        font-family: 'Rajdhani', sans-serif;
+        font-size: 15px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        cursor: pointer;
+        transition: all 0.15s;
+    }
+    .btn-apply:active { transform: scale(0.97); opacity: 0.9; }
+
+    /* Number input */
+    .input-section {
+        width: 100%;
+        max-width: 600px;
+        margin-bottom: 12px;
+    }
+
+    .input-label {
+        font-size: 12px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 6px;
+    }
+
+    #numberInput {
+        width: 100%;
+        padding: 12px 16px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        color: var(--text);
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 22px;
+        text-align: center;
+        outline: none;
+        transition: border-color 0.2s;
+    }
+    #numberInput:focus { border-color: var(--red); box-shadow: 0 0 0 2px var(--red-glow); }
+
+    /* BIG START BUTTON */
+    #startBtn {
+        width: 100%;
+        max-width: 600px;
+        height: clamp(100px, 25vw, 160px);
+        background: var(--red);
+        border: none;
+        border-radius: 16px;
+        color: #fff;
+        font-family: 'Rajdhani', sans-serif;
+        font-size: clamp(32px, 8vw, 56px);
+        font-weight: 700;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 8px 40px var(--red-glow), 0 0 0 0 var(--red-glow);
+        transition: transform 0.1s ease, box-shadow 0.1s ease;
+        margin-bottom: 12px;
+        -webkit-tap-highlight-color: transparent;
+        user-select: none;
+    }
+
+    #startBtn::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(180deg, rgba(255,255,255,0.12) 0%, transparent 60%);
+        pointer-events: none;
+    }
+
+    #startBtn:active, #startBtn.pressed {
+        transform: scale(0.97);
+        box-shadow: 0 4px 20px var(--red-glow);
+    }
+
+    #startBtn .btn-hint {
+        display: block;
+        font-size: clamp(10px, 2.5vw, 14px);
+        font-weight: 600;
+        letter-spacing: 0.2em;
+        opacity: 0.7;
+        margin-top: 4px;
+    }
+
+    /* Ripple */
+    .ripple {
+        position: absolute;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.3);
+        transform: scale(0);
+        animation: ripple-anim 0.5s linear;
+        pointer-events: none;
+    }
+    @keyframes ripple-anim {
+        to { transform: scale(4); opacity: 0; }
+    }
+
+    /* Reset button */
+    #resetBtn {
+        width: 100%;
+        max-width: 600px;
+        padding: 12px;
+        background: transparent;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        color: var(--muted);
+        font-family: 'Rajdhani', sans-serif;
+        font-size: 15px;
+        font-weight: 600;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        cursor: pointer;
+        margin-bottom: 20px;
+        transition: all 0.15s;
+    }
+    #resetBtn:hover { border-color: var(--red); color: var(--red); }
+
+    /* Volume key hint */
+    .vol-hint {
+        font-size: 11px;
+        color: var(--muted);
+        text-align: center;
+        margin-bottom: 16px;
+        letter-spacing: 0.05em;
+    }
+
+    /* Output list */
+    #output {
+        width: 100%;
+        max-width: 600px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .timer-entry {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-left: 3px solid var(--red);
+        border-radius: 10px;
+        padding: 12px 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        animation: entryIn 0.25s ease;
+    }
+    @keyframes entryIn {
+        from { opacity: 0; transform: translateX(-12px); }
+        to   { opacity: 1; transform: translateX(0); }
+    }
+
+    .entry-left {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .entry-number {
+        font-size: 22px;
+        font-weight: 700;
+        color: var(--red);
+    }
+
+    .entry-start {
+        font-size: 12px;
+        color: var(--muted);
+        font-family: 'Share Tech Mono', monospace;
+        letter-spacing: 0.05em;
+    }
+
+    .entry-counter {
+        font-family: 'Share Tech Mono', monospace;
+        font-size: clamp(20px, 5vw, 28px);
+        color: var(--green);
+        text-shadow: 0 0 12px rgba(0,255,136,0.3);
+        letter-spacing: 0.05em;
+    }
+</style>
+```
+
 </head>
 <body>
-    <h1>GUN START & TIMER CORSA</h1>
-    <p id="localTime">Caricamento ora...</p>
-    <input type="number" id="numberInput" placeholder="Inserisci un numero">
-    <button onclick="handleButtonClick()">Avvia Timer</button>
-    <button onclick="resetTimers()">Reset</button>
-    <div id="output"></div>
+
+```
+<div class="header">
+    <h1>⚡ Gun Start</h1>
+</div>
+
+<!-- Clock Panel -->
+<div class="clock-panel">
+    <div class="clock-row">
+        <span class="clock-label">Ora corrente</span>
+        <span id="syncStatus" class="sync-status manual">Locale</span>
+    </div>
+    <div class="clock-row">
+        <span id="localTime">00:00:00</span>
+    </div>
+    <div class="action-row">
+        <button class="btn-small primary" onclick="syncTimeAPI()">🌐 Sincronizza NTP</button>
+        <button class="btn-small" onclick="toggleManualPanel()">✏️ Imposta Ora</button>
+    </div>
+</div>
+
+<!-- Manual Time Panel -->
+<div class="manual-panel" id="manualPanel">
+    <h3>⏱ Imposta orario manuale</h3>
+    <div class="time-inputs">
+        <div class="time-input-group">
+            <label>Ore</label>
+            <input type="number" id="manualHH" min="0" max="23" placeholder="HH">
+        </div>
+        <span class="time-sep">:</span>
+        <div class="time-input-group">
+            <label>Minuti</label>
+            <input type="number" id="manualMM" min="0" max="59" placeholder="MM">
+        </div>
+        <span class="time-sep">:</span>
+        <div class="time-input-group">
+            <label>Secondi</label>
+            <input type="number" id="manualSS" min="0" max="59" placeholder="SS">
+        </div>
+    </div>
+    <button class="btn-apply" onclick="applyManualTime()">✔ Applica orario</button>
+</div>
+
+<!-- Number Input -->
+<div class="input-section">
+    <div class="input-label">Numero pettorale / partenza</div>
+    <input type="number" id="numberInput" placeholder="Es: 42" inputmode="numeric">
+</div>
+
+<!-- BIG START BUTTON -->
+<button id="startBtn" onclick="handleButtonClick(event)">
+    AVVIA
+    <span class="btn-hint">▼ Tasto Volume Giù</span>
+</button>
+
+<p class="vol-hint">Puoi anche premere il tasto Volume ▼ del telefono per avviare</p>
+
+<button id="resetBtn" onclick="resetTimers()">⟳ Reset tutti i timer</button>
+
+<div id="output"></div>
+
+<script>
+    // ─── State ────────────────────────────────────────────────────────────────
+    let intervalIds = [];
+    let timeOffset = 0; // offset ms between local Date.now() and "true" time
+    let syncMode = 'local'; // 'local' | 'ntp' | 'manual'
+
+    function trueNow() {
+        return Date.now() + timeOffset;
+    }
+
+    function trueDate() {
+        return new Date(trueNow());
+    }
+
+    // ─── Clock display ────────────────────────────────────────────────────────
+    function updateLocalTime() {
+        document.getElementById('localTime').innerText = trueDate().toLocaleTimeString('it-IT');
+    }
+
+    // ─── NTP Sync ─────────────────────────────────────────────────────────────
+    async function syncTimeAPI() {
+        const btn = document.querySelector('.btn-small.primary');
+        btn.textContent = '⏳ Sincronizzazione...';
+        btn.disabled = true;
+
+        const setSyncStatus = (mode, label) => {
+            syncMode = mode;
+            const el = document.getElementById('syncStatus');
+            el.textContent = label;
+            el.className = 'sync-status ' + (mode === 'ntp' ? 'synced' : mode === 'manual' ? 'manual' : 'error');
+        };
+
+        // We ping worldtimeapi; if blocked we fallback to a simpler approach
+        const apis = [
+            'https://worldtimeapi.org/api/ip',
+            'https://timeapi.io/api/time/current/zone?timeZone=Europe/Rome'
+        ];
+
+        for (const url of apis) {
+            try {
+                const t0 = Date.now();
+                const res = await fetch(url);
+                if (!res.ok) continue;
+                const data = await res.json();
+                const t1 = Date.now();
+                const latency = (t1 - t0) / 2;
+
+                // worldtimeapi uses "datetime", timeapi uses "dateTime"
+                const isoStr = data.datetime || data.dateTime;
+                if (!isoStr) continue;
+
+                const serverTime = new Date(isoStr).getTime();
+                timeOffset = (serverTime + latency) - t1;
+                setSyncStatus('ntp', '✓ NTP');
+                btn.textContent = '✓ Sincronizzato';
+                setTimeout(() => { btn.textContent = '🌐 Sincronizza NTP'; btn.disabled = false; }, 2000);
+                return;
+            } catch (_) {}
+        }
+
+        // All APIs failed
+        setSyncStatus('error', '✗ Errore sync');
+        btn.textContent = '🌐 Sincronizza NTP';
+        btn.disabled = false;
+        alert('Impossibile sincronizzare. Usa impostazione manuale.');
+    }
+
+    // ─── Manual time ──────────────────────────────────────────────────────────
+    function toggleManualPanel() {
+        const p = document.getElementById('manualPanel');
+        p.classList.toggle('open');
+        if (p.classList.contains('open')) {
+            const now = trueDate();
+            document.getElementById('manualHH').value = now.getHours();
+            document.getElementById('manualMM').value = now.getMinutes();
+            document.getElementById('manualSS').value = now.getSeconds();
+        }
+    }
+
+    function applyManualTime() {
+        const hh = parseInt(document.getElementById('manualHH').value) || 0;
+        const mm = parseInt(document.getElementById('manualMM').value) || 0;
+        const ss = parseInt(document.getElementById('manualSS').value) || 0;
+
+        const now = new Date();
+        const target = new Date(now);
+        target.setHours(hh, mm, ss, 0);
+
+        timeOffset = target.getTime() - Date.now();
+        syncMode = 'manual';
+
+        const el = document.getElementById('syncStatus');
+        el.textContent = '✏ Manuale';
+        el.className = 'sync-status manual';
+
+        document.getElementById('manualPanel').classList.remove('open');
+    }
+
+    // ─── Timer formatting ─────────────────────────────────────────────────────
+    function formatTime(seconds) {
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        const s = seconds % 60;
+        return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    }
+
+    function startCounter(display, startEpoch) {
+        function tick() {
+            const elapsed = Math.floor((trueNow() - startEpoch) / 1000);
+            display.textContent = formatTime(Math.max(0, elapsed));
+        }
+        tick();
+        const id = setInterval(tick, 1000);
+        intervalIds.push(id);
+    }
+
+    // ─── Main button ──────────────────────────────────────────────────────────
+    function handleButtonClick(event) {
+        // Ripple effect
+        if (event) {
+            const btn = document.getElementById('startBtn');
+            const r = document.createElement('span');
+            r.className = 'ripple';
+            const rect = btn.getBoundingClientRect();
+            const size = Math.max(rect.width, rect.height);
+            const x = (event.clientX || rect.left + rect.width/2) - rect.left - size/2;
+            const y = (event.clientY || rect.top + rect.height/2) - rect.top - size/2;
+            r.style.cssText = `width:${size}px;height:${size}px;left:${x}px;top:${y}px`;
+            btn.appendChild(r);
+            setTimeout(() => r.remove(), 600);
+        }
+
+        const numVal = document.getElementById('numberInput').value.trim();
+        const label = numVal || '—';
+        const startEpoch = trueNow();
+        const startTime = trueDate();
+
+        // DOM entry
+        const outputDiv = document.getElementById('output');
+        const entry = document.createElement('div');
+        entry.className = 'timer-entry';
+
+        const left = document.createElement('div');
+        left.className = 'entry-left';
+
+        const num = document.createElement('div');
+        num.className = 'entry-number';
+        num.textContent = '#' + label;
+
+        const started = document.createElement('div');
+        started.className = 'entry-start';
+        started.textContent = 'Gun start: ' + startTime.toLocaleTimeString('it-IT');
+
+        left.appendChild(num);
+        left.appendChild(started);
+
+        const counter = document.createElement('div');
+        counter.className = 'entry-counter';
+        counter.textContent = '00:00:00';
+
+        entry.appendChild(left);
+        entry.appendChild(counter);
+        outputDiv.insertBefore(entry, outputDiv.firstChild);
+
+        startCounter(counter, startEpoch);
+
+        // Persist (without localStorage, use in-memory array)
+        savedTimers.push({ number: label, startEpoch });
+    }
+
+    // In-memory storage (replaces localStorage which isn't available here)
+    let savedTimers = [];
+
+    function resetTimers() {
+        if (!confirm('Vuoi resettare tutti i timer?')) return;
+        intervalIds.forEach(clearInterval);
+        intervalIds = [];
+        savedTimers = [];
+        document.getElementById('output').innerHTML = '';
+    }
+
+    // ─── Volume key support ───────────────────────────────────────────────────
+    document.addEventListener('keydown', (e) => {
+        // Volume down on some devices sends MediaTrackNext or AudioVolumeDown
+        if (e.key === 'AudioVolumeDown' || e.key === 'VolumeDown' || e.code === 'AudioVolumeDown') {
+            e.preventDefault();
+            const btn = document.getElementById('startBtn');
+            btn.classList.add('pressed');
+            handleButtonClick(null);
+            setTimeout(() => btn.classList.remove('pressed'), 150);
+        }
+    });
+
+    // Android/iOS physical volume key via MediaSession hack
+    if ('mediaSession' in navigator) {
+        navigator.mediaSession.setActionHandler('previoustrack', null);
+        navigator.mediaSession.setActionHandler('nexttrack', () => {
+            handleButtonClick(null);
+        });
+    }
+
+    // ─── Boot ─────────────────────────────────────────────────────────────────
+    updateLocalTime();
+    setInterval(updateLocalTime, 500);
+</script>
+```
+
 </body>
 </html>
